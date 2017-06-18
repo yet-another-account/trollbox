@@ -4,34 +4,39 @@
 <!-- Before you ask: yes, it is ratelimited. I could have left that for you to discover, but, see, i'm nice like that -->
 
 <head>
-    <title>The Trollbox&#153;</title>
+    <title>The Trollbox&trade;</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
-            -webkit-box-sizing: border-box;
-            -moz-box-sizing: border-box;
-            box-sizing: border-box;
             padding: 0;
             margin: 0;
             font-size: 14px;
         }
-        
-        #ta {
-            font-family: Courier New, Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, monospace;
-            width: 100%;
-            height: 100%;
-            white-space: pre-wrap;
-            overflow-y: scroll;
-            margin-bottom: -30px;
-        }
-        
-        html,
-        body {
+
+        html, body {
             height: 100%;
             max-width: 100%;
             max-height: 100%;
             overflow-x: hidden;
             overflow-y: hidden;
+        }
+
+        form {
+            display: inline;
+            white-space: nowrap;
+        }
+
+        #ta {
+            font-family: Courier New, Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, monospace;
+            width: 100%;
+            height: calc(100% - 2em);
+            white-space: pre-wrap;
+            overflow-y: scroll;
+        }
+
+        #chatinp {
+            width: 100%;
+            height: 2em;
         }
     </style>
     <!-- The jquery is just for linkify. I don't actually use it for my code. Why? I'll leave that up to you. -->
@@ -44,10 +49,10 @@
     <div id="ta"></div>
     <!-- Apparantly, some browsers _still_ mess up the send button without nobr. -->
     <nobr>
-        <form onsubmit="return false;" style="display:inline; white-space: nowrap;">
-            <input id=chatinp type=text style="width:100%;height:30px;margin-right:0px;" autocomplete="off" placeholder="Type Stuff Here!" />
+        <form onsubmit="return false;">
+            <input id=chatinp type=text autocomplete="off" placeholder="Type Stuff Here!" />
             <!-- Invisible button is invisible! -->
-            <input id=chatbutton type=submit value="SEND" style="width:0px;height:0px" onclick="send(); return false;" />
+            <input id=chatbutton type=submit value="SEND" onclick="send(); return false;" />
         </form>
     </nobr>
     <script>
@@ -78,7 +83,7 @@
         var err;
         var uname = null;
         var reconnect = -1;
-        
+
         var scrt = "aHR0cHM6Ly9zdXBlcnNoYWR5Lmxpbmsv";
 
         // you can write plugins/bots/mods by simply using these hooks! i just saved you a lot of effort!
@@ -98,11 +103,11 @@
                 recvhooks[i](event.data);
             }
         }
-        
+
         var fnonclose = function(event) {
             appendText("Disconnected from server. Use /connect to reconnect. ");
             ws = null;
-       }
+        }
 
         function registerCommand(cmdname, helpmsg, hook) {
         	sendhooks[cmdname] = hook;
