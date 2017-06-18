@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<!-- Congratz! You looked at the source! You are now 0.000023% closer to pwning this site! -->
+<!-- Before you ask: yes, it is ratelimited. I could have left that for you to discover, but, see, i'm nice like that -->
+
+<head>
+    <title>The Trollbox&#153;</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        #ta {
+            font-family: Courier New, Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, monospace;
+            width: 100%;
+            height: 100%;
+            white-space: pre-wrap;
+            overflow-y: scroll;
+            margin-bottom: -30px;
+        }
+        
+        html,
+        body {
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            overflow-x: hidden;
+            overflow-y: hidden;
+        }
+    </style>
+    <!-- The jquery is just for linkify. I don't actually use it for my code. Why? I'll leave that up to you. -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-linkify/2.1.4/linkify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-linkify/2.1.4/linkify-jquery.min.js"></script>
+</head>
+
+<body>
+    <div id="ta"></div>
+    <!-- Apparantly, some browsers _still_ mess up the send button without nobr. -->
+    <nobr>
+        <form onsubmit="return false;" style="display:inline; white-space: nowrap;">
+            <input id=chatinp type=text style="width:100%;height:30px;margin-right:0px;" autocomplete="off" placeholder="Type Stuff Here!" />
+            <!-- Invisible button is invisible! -->
+            <input id=chatbutton type=submit value="SEND" style="width:0px;height:0px" onclick="send(); return false;" />
+        </form>
+    </nobr>
+    <script>
+        var textarea = document.getElementById("ta");
+        var inp = document.getElementById("chatinp");
+
+        // yes, the backend is also on the pi. 
+        // and before you ask, no, the number 1946 does not have any intended additional significance to it.
+        var server = "ws://eukaryote.duckdns.org:1946";
+
+        function appendText(text) {
+            textarea.innerText += text + "\n";
+
+            // auto scroll. sorry if i interrupted your scrolling-up ;D
+            textarea.scrollTop = textarea.scrollHeight;
+
+            $("#ta").linkify({
+                // after all, if someone posts porn, we want it to open in a new tab, always.
+                target: "_blank"
+            });
+        }
+
+        appendText("Version 1.4 Started.");
+        appendText("Use /qc <name> to connect to server!");
+
+        var pickedusername = true;
+        var ws;
+        var err;
+        var uname = null;
+        var reconnect = -1;
+        
+        var scrt = "aHR0cHM6Ly9zdXBlcnNoYWR5Lmxpbmsv";
+
+        // you can write plugins/bots/mods by simply using these hooks! i just saved you a lot of effort!
+        var recvhooks = [];
+        var sendhooks = {};
+        var cmdhelp = {};
+
+        var fnonopen = function(event) {
+            ws.send(uname);
+            pickedusername = true;
+            clearTimeout(err);
+            if(reconnect != -1) clearTimeout(reconnect);
+        }
+
+        var fnonmessage = function(event) {
+            for(var i = 0; i < recvhooks.length; i++) {
+                recvhooks[i](event.data);
+            }
+        }
+        
+        var fnonclose = function(event) {
+            appendText("Disconnected from server. Use /connect to reconnect. ");
+            ws = null;
+       }
+
+        function registerCommand(cmdname, helpmsg, hook) {
+        	sendhooks[cmdname] = hook;
+        	cmdhelp[cmdname] = helpmsg;
+        }
+
+        // outgoing messages
+        registerCommand("/shrug", "Shrugs so you dont have to!", function(msg) {
+            return "\u00AF\\_(\u30C4)_/\u00AF";
+        });
+
+        registerCommand("/nick", "Sets username", function(msg) {
+            uname = msg.split(" ", 2)[1].replace("\n", "").replace(" ", "").trim();
+            appendText("Nick set to " + uname);
+            return ws == null ? null : msg;
+        });
+
+        registerCommand("/connect", "Connects to server", function(msg) {
+            if(ws != null) {
+                appendText("Already connected to a server! Use /disconnect to disconnect from server. ");
+                return null;
+            }
+
+            if(uname == null) {
+                appendText("No nick set yet! Use /nick to set nick. ");
+                return null;
+            }
+
+            appendText("Attempting to connect to server " + server);
+
+            ws = new WebSocket(server);
+
+            ws.onopen = fnonopen;
+            ws.onmessage = fnonmessage;
+            ws.onclose = fnonclose;
+
+            ws.send(uname);
+
+            return null;
+        });
+
+        registerCommand("/disconnect", "Disconnect from server", function(msg) {
+            if(ws == null) {
+                appendText("Not already connected to a server! Use /connect to connect to server. ");
+                return null;
+            }
+
+            ws.close();
+
+            ws = null;
+
+            return null;
+        });
+
+        registerCommand("/qc", "Quick connect to server. Argument: username", function(msg) {
+            if(ws != null) {
+                appendText("Already connected to a server! Use /disconnect to disconnect from server. ");
+                return null;
+            }
+
+            var nick = msg.split(" ", 2)[1].trim();
+
+            if(nick.length == 0) {
+                appendText("Invalid nick!");
+                return null;
+            }
+
+
+            // it's just a simple shorthand for people so that they dont need to type that much.
+            sendMsg("/nick " + nick);
+            sendMsg("/connect");
+
+            return null;
+
+        });
+
+        sendhooks["/help"] = function(msg) {
+        	var str = "Local commands: \n";
+
+			for(var i in cmdhelp) {
+				str += i + ": " + cmdhelp[i] + "\n";
+			}
+
+			appendText(str);
+
+        	return msg;
+        }
+
+        // incoming messages
+        recvhooks.push(function(msg) {
+        	appendText(msg);
+        });
+
+        function send() {
+            var msg = inp.value;
+            inp.value = "";
+
+            sendMsg(msg);
+        }
+
+        function sendMsg(msg) {
+            // don't even think about it. 
+            if (msg.trim() == "") return;
+
+
+            var cmd = msg.split(" ", 2) [0];
+            var sendhook = sendhooks[cmd];
+            if(sendhook == undefined) {
+                if(ws == null) return;
+
+                ws.send(msg);
+            } else {
+                var tosend = sendhook(msg);
+
+                if(tosend == null)
+                    return;
+                ws.send(tosend);
+            }
+        }
+    </script>
+
+    <!-- Piwik -->
+    <script type="text/javascript">
+        // yes. piwik tracker. theres nothing wrong with that, right?
+
+        var _paq = _paq || [];
+        /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+        _paq.push(['trackPageView']);
+        _paq.push(['enableLinkTracking']);
+        (function() {
+            var u = "//eukaryote.duckdns.org/piwik/";
+            _paq.push(['setTrackerUrl', u + 'piwik.php']);
+            _paq.push(['setSiteId', '1']);
+            var d = document,
+                g = d.createElement('script'),
+                s = d.getElementsByTagName('script')[0];
+            g.type = 'text/javascript';
+            g.async = true;
+            g.defer = true;
+            g.src = u + 'piwik.js';
+            s.parentNode.insertBefore(g, s);
+        })();
+    </script>
+    <!-- End Piwik Code -->
+</body>
+
+</html>
