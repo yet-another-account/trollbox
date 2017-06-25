@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import ssl
 from time import sleep
 
 import multiset
@@ -103,7 +104,10 @@ def client_handler(websocket: websockets.WebSocketServerProtocol, path):
         logging.info("{} disconnected ({})".format(their_name, websocket.remote_address))
 
 
-start_server = websockets.serve(client_handler, *LISTEN_ADDRESS)
+sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+sc.load_cert_chain('key.pem', 'cert.pem')
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+loop = asyncio.get_event_loop()
+start_server = websockets.serve(client_handler, *LISTEN_ADDRESS, ssl=sc, loop=loop)
+loop.run_until_complete(start_server)
+loop.run_forever()
